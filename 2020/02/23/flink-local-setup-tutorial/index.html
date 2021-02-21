@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"blog.reyzal.com","root":"/","scheme":"Muse","version":"7.7.1","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Flink有三种部署模式，分别是Local(本地)，Standalone Cluster(独立集群)和Yarn Cluster(Yarn集群)。本地模式主要用于开发者开发调试时使用，本文介绍Flink本地模式环境搭建。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink本地模式环境搭建">
+<meta property="og:url" content="https://blog.reyzal.com/2020/02/23/flink-local-setup-tutorial/index.html">
+<meta property="og:site_name" content="reyzal&#39;s blog">
+<meta property="og:description" content="Flink有三种部署模式，分别是Local(本地)，Standalone Cluster(独立集群)和Yarn Cluster(Yarn集群)。本地模式主要用于开发者开发调试时使用，本文介绍Flink本地模式环境搭建。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://blog.reyzal.com/2020/02/23/flink-local-setup-tutorial/flink-dashboard.png">
+<meta property="og:image" content="https://blog.reyzal.com/2020/02/23/flink-local-setup-tutorial/flink-dashboard-1.png">
+<meta property="og:image" content="https://blog.reyzal.com/2020/02/23/flink-local-setup-tutorial/flink-dashboard-2.png">
+<meta property="article:published_time" content="2020-02-23T13:40:34.000Z">
+<meta property="article:modified_time" content="2021-02-16T16:30:30.310Z">
+<meta property="article:author" content="reyzal">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://blog.reyzal.com/2020/02/23/flink-local-setup-tutorial/flink-dashboard.png">
+
+<link rel="canonical" href="https://blog.reyzal.com/2020/02/23/flink-local-setup-tutorial/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>Flink本地模式环境搭建 | reyzal's blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">reyzal's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://blog.reyzal.com/2020/02/23/flink-local-setup-tutorial/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="reyzal">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="reyzal's blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Flink本地模式环境搭建
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-02-23 21:40:34" itemprop="dateCreated datePublished" datetime="2020-02-23T21:40:34+08:00">2020-02-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-17 00:30:30" itemprop="dateModified" datetime="2021-02-17T00:30:30+08:00">2021-02-17</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>Flink有三种部署模式，分别是Local(本地)，Standalone Cluster(独立集群)和Yarn Cluster(Yarn集群)。本地模式主要用于开发者开发调试时使用，本文介绍Flink本地模式环境搭建。</p>
+<a id="more"></a>
+<h1 id="开发环境"><a href="#开发环境" class="headerlink" title="开发环境"></a>开发环境</h1><h2 id="java"><a href="#java" class="headerlink" title="java"></a>java</h2><p>Flink需要Java8.x环境，<a href="https://www.oracle.com/java/technologies/javase-jdk8-downloads.html" target="_blank" rel="noopener">下载地址</a>，根据系统选择安装包即可(Linux/Window/MacOS都可以)。用以下命令验证是否安装成功</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ java -version</span><br><span class="line">java version &quot;1.8.0_241&quot;</span><br><span class="line">Java(TM) SE Runtime Environment (build 1.8.0_241-b07)</span><br><span class="line">Java HotSpot(TM) 64-Bit Server VM (build 25.241-b07, mixed mode)</span><br></pre></td></tr></table></figure>
+<h2 id="maven"><a href="#maven" class="headerlink" title="maven"></a>maven</h2><p><a href="https://maven.apache.org/download.cgi" target="_blank" rel="noopener">下载地址</a>，用以下命令验证是否安装成功</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ mvn --version</span><br><span class="line">Apache Maven 3.6.3 (cecedd343002696d0abb50b32b541b8a6ba2883f)</span><br><span class="line">Maven home: &#x2F;usr&#x2F;local&#x2F;Cellar&#x2F;maven&#x2F;3.6.3&#x2F;libexec</span><br><span class="line">Java version: 1.8.0_241, vendor: Oracle Corporation, runtime: &#x2F;Library&#x2F;Java&#x2F;JavaVirtualMachines&#x2F;jdk1.8.0_241.jdk&#x2F;Contents&#x2F;Home&#x2F;jre</span><br><span class="line">Default locale: zh_CN, platform encoding: UTF-8</span><br><span class="line">OS name: &quot;mac os x&quot;, version: &quot;10.14.6&quot;, arch: &quot;x86_64&quot;, family: &quot;mac&quot;</span><br></pre></td></tr></table></figure>
+<h2 id="ItelliJ-IDEA"><a href="#ItelliJ-IDEA" class="headerlink" title="ItelliJ IDEA"></a>ItelliJ IDEA</h2><p>推荐用ItelliJ IDEA开发Flink应用程序(社区免费版就可以了)，<a href="https://www.jetbrains.com/idea/" target="_blank" rel="noopener">下载地址</a></p>
+<h1 id="Flink下载-amp-启动"><a href="#Flink下载-amp-启动" class="headerlink" title="Flink下载&amp;启动"></a>Flink下载&amp;启动</h1><p>从Flink<a href="https://flink.apache.org/downloads.html" target="_blank" rel="noopener">下载页面</a>根据Scala版本选择合适的下载包，本文选择<code>Apache Flink 1.10.0 for Scala 2.12</code>，按如下命令解压并启动</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">$ cd ~&#x2F;Downloads        # 转到下载目录</span><br><span class="line">$ tar xzf flink-1.10.0-bin-scala_2.12.tgz   # 解压压缩包</span><br><span class="line">$ cd flink-1.10.0  # 进入Flink目录</span><br><span class="line">$ .&#x2F;bin&#x2F;start-cluster.sh  # 启动Flink本地集群</span><br></pre></td></tr></table></figure>
+<p>启动完成会有如下输出：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Starting cluster.</span><br><span class="line">Starting standalonesession daemon on host localhost.</span><br><span class="line">Starting taskexecutor daemon on host localhost.</span><br></pre></td></tr></table></figure>
+<p>访问<a href="http://localhost:8081" target="_blank" rel="noopener">Flink Web前端</a>，如下图所示<br><img src="/2020/02/23/flink-local-setup-tutorial/flink-dashboard.png" alt><br>如果运行异常，可以用如下命令查看运行时日志</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">$ tail log&#x2F;flink-*-standalonesession-*.log</span><br><span class="line">INFO  ...  - http:&#x2F;&#x2F;localhost:8081 was granted leadership with leaderSessionID&#x3D;...</span><br><span class="line">INFO  ...  - Web frontend listening at http:&#x2F;&#x2F;localhost:8081.</span><br><span class="line">INFO  ...  - Starting RPC endpoint for org.apache.flink.runtime.resourcemanager.StandaloneResourceManager at akka:&#x2F;&#x2F;flink&#x2F;user&#x2F;resourcemanager .</span><br><span class="line">INFO  ...  - Start SessionDispatcherLeaderProcess.</span><br><span class="line">INFO  ...  - Recover all persisted job graphs.</span><br><span class="line">INFO  ...  - Successfully recovered 0 persisted job graphs.</span><br><span class="line">INFO  ...  - ResourceManager akka.tcp:&#x2F;&#x2F;flink@localhost:6123&#x2F;user&#x2F;resourcemanager was granted leadership with fencing token ...</span><br><span class="line">INFO  ...  - Starting RPC endpoint for org.apache.flink.runtime.dispatcher.StandaloneDispatcher at akka:&#x2F;&#x2F;flink&#x2F;user&#x2F;dispatcher .</span><br><span class="line">INFO  ...  - Starting the SlotManager.</span><br><span class="line">INFO  ...  - Registering TaskManager with ResourceID 889063d9821325433686ccb1ba1a1cf8 (akka.tcp:&#x2F;&#x2F;flink@127.0.0.1:52610&#x2F;user&#x2F;taskmanager_0) at ResourceManager</span><br></pre></td></tr></table></figure>
+<h1 id="WordCount示例"><a href="#WordCount示例" class="headerlink" title="WordCount示例"></a>WordCount示例</h1><p>WordCount算是大数据里的HelloWorld了，下面命令根据Flink-quickstart-java模板生成应用程序，groupId和artifactId以及package可以自定义</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">mvn archetype:generate \</span><br><span class="line">-DarchetypeGroupId&#x3D;org.apache.flink \</span><br><span class="line">-DarchetypeArtifactId&#x3D;flink-quickstart-java \</span><br><span class="line">-DarchetypeVersion&#x3D;1.10.0 \</span><br><span class="line">-DgroupId&#x3D;com.reyzal \</span><br><span class="line">-DartifactId&#x3D;word-count \</span><br><span class="line">-Dversion&#x3D;1.0.0 \</span><br><span class="line">-Dpackage&#x3D;com.reyzal \</span><br><span class="line">-DinteractiveMode&#x3D;false</span><br></pre></td></tr></table></figure>
+<p>删除模板自动生成的代码文件，以及生成WordCount代码文件</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cd word-count</span><br><span class="line">rm src&#x2F;main&#x2F;java&#x2F;com&#x2F;reyzal&#x2F;*.java</span><br><span class="line">touch src&#x2F;main&#x2F;java&#x2F;com&#x2F;reyzal&#x2F;SocketWindowWordCount.java</span><br></pre></td></tr></table></figure>
+<p>编辑SocketWindowWordCount.java文件内容如下，它从socket中读取文本，每5秒打印一次在前5秒内每个不同单词的出现次数，修改pom.xml中mainClass为com.reyzal.SocketWindowWordCount</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br></pre></td><td class="code"><pre><span class="line">package com.reyzal;</span><br><span class="line"></span><br><span class="line">import org.apache.flink.api.common.functions.FlatMapFunction;</span><br><span class="line">import org.apache.flink.api.common.functions.ReduceFunction;</span><br><span class="line">import org.apache.flink.api.java.utils.ParameterTool;</span><br><span class="line">import org.apache.flink.streaming.api.datastream.DataStream;</span><br><span class="line">import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;</span><br><span class="line">import org.apache.flink.streaming.api.windowing.time.Time;</span><br><span class="line">import org.apache.flink.util.Collector;</span><br><span class="line"></span><br><span class="line">public class SocketWindowWordCount &#123;</span><br><span class="line"></span><br><span class="line">    public static void main(String[] args) throws Exception &#123;</span><br><span class="line"></span><br><span class="line">        &#x2F;&#x2F; 从参数中解析端口</span><br><span class="line">        final int port;</span><br><span class="line">        try &#123;</span><br><span class="line">            final ParameterTool params &#x3D; ParameterTool.fromArgs(args);</span><br><span class="line">            port &#x3D; params.getInt(&quot;port&quot;);</span><br><span class="line">        &#125; catch (Exception e) &#123;</span><br><span class="line">            System.err.println(&quot;No port specified. Please run &#39;SocketWindowWordCount --port &lt;port&gt;&#39;&quot;);</span><br><span class="line">            return;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        final StreamExecutionEnvironment env &#x3D; StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line"></span><br><span class="line">        &#x2F;&#x2F; 从socket中获取数据</span><br><span class="line">        DataStream&lt;String&gt; text &#x3D; env.socketTextStream(&quot;localhost&quot;, port, &quot;\n&quot;);</span><br><span class="line"></span><br><span class="line">        &#x2F;&#x2F; 解析输入的数据，按照词进行分组，建立5分钟的滑动窗口，计算窗口中词的数目</span><br><span class="line">        DataStream&lt;WordWithCount&gt; windowCounts &#x3D; text</span><br><span class="line">            .flatMap(new FlatMapFunction&lt;String, WordWithCount&gt;() &#123;</span><br><span class="line">                @Override</span><br><span class="line">                public void flatMap(String value, Collector&lt;WordWithCount&gt; out) &#123;</span><br><span class="line">                    for (String word : value.split(&quot;\\s&quot;)) &#123;</span><br><span class="line">                        out.collect(new WordWithCount(word, 1L));</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;)</span><br><span class="line">            .keyBy(&quot;word&quot;)</span><br><span class="line">            .timeWindow(Time.seconds(5), Time.seconds(1))</span><br><span class="line">            .reduce(new ReduceFunction&lt;WordWithCount&gt;() &#123;</span><br><span class="line">                @Override</span><br><span class="line">                public WordWithCount reduce(WordWithCount a, WordWithCount b) &#123;</span><br><span class="line">                    return new WordWithCount(a.word, a.count + b.count);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;);</span><br><span class="line"></span><br><span class="line">        &#x2F;&#x2F; 打印数据</span><br><span class="line">        windowCounts.print().setParallelism(1);</span><br><span class="line"></span><br><span class="line">        env.execute(&quot;Socket Window WordCount&quot;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public static class WordWithCount &#123;</span><br><span class="line"></span><br><span class="line">        public String word;</span><br><span class="line">        public long count;</span><br><span class="line"></span><br><span class="line">        public WordWithCount() &#123;&#125;</span><br><span class="line"></span><br><span class="line">        public WordWithCount(String word, long count) &#123;</span><br><span class="line">            this.word &#x3D; word;</span><br><span class="line">            this.count &#x3D; count;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        @Override</span><br><span class="line">        public String toString() &#123;</span><br><span class="line">            return word + &quot; : &quot; + count;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="执行示例"><a href="#执行示例" class="headerlink" title="执行示例"></a>执行示例</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">mvn clean package  # 编译</span><br><span class="line">nc -l 9000  # 新开一个终端，启动socket服务端</span><br><span class="line"># 进入flink根目录</span><br><span class="line">cd ..&#x2F;flink-1.10.0  # 进入Flink根目录</span><br><span class="line">flink run target&#x2F;word-count-1.0.0.jar --port 9000 # 提交任务</span><br></pre></td></tr></table></figure>
+<p>提交完成后，会有如下输出</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Job has been submitted with JobID 069b9073db238f9f67c34df7993d35e6</span><br></pre></td></tr></table></figure>
+<p>打开<a href="http://localhost:8081/#/overview" target="_blank" rel="noopener">Flink Web页面</a>，查看任务是否提交成功<br><img src="/2020/02/23/flink-local-setup-tutorial/flink-dashboard-1.png" alt><br><img src="/2020/02/23/flink-local-setup-tutorial/flink-dashboard-2.png" alt><br>在新开的终端中输入数据</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hello world</span><br><span class="line">word count</span><br></pre></td></tr></table></figure>
+<p>用如下命令查看flink输出的日志</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">$ tail -f log&#x2F;flink-*-taskexecutor-*.out</span><br><span class="line">hello : 1</span><br><span class="line">world : 1</span><br><span class="line">world : 1</span><br><span class="line">hello : 1</span><br><span class="line">hello : 1</span><br><span class="line">world : 1</span><br><span class="line">word : 1</span><br><span class="line">count : 1</span><br><span class="line">count : 1</span><br><span class="line">word : 1</span><br><span class="line">word : 1</span><br><span class="line">count : 1</span><br></pre></td></tr></table></figure>
+
+<h1 id="关闭Flink本地集群"><a href="#关闭Flink本地集群" class="headerlink" title="关闭Flink本地集群"></a>关闭Flink本地集群</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">.&#x2F;bin&#x2F;stop-cluster.sh</span><br></pre></td></tr></table></figure>
+<h1 id="源码"><a href="#源码" class="headerlink" title="源码"></a>源码</h1><p><a href="word-count.zip">工程下载</a></p>
+<h1 id="参考文档"><a href="#参考文档" class="headerlink" title="参考文档"></a>参考文档</h1><p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.10/getting-started/tutorials/local_setup.html" target="_blank" rel="noopener">https://ci.apache.org/projects/flink/flink-docs-release-1.10/getting-started/tutorials/local_setup.html</a></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/2021/02/18/effective_cpp_33/" rel="next" title="[Effective C++] 条款33：避免遮掩继承而来的名称">
+      [Effective C++] 条款33：避免遮掩继承而来的名称 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#开发环境"><span class="nav-number">1.</span> <span class="nav-text">开发环境</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#java"><span class="nav-number">1.1.</span> <span class="nav-text">java</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#maven"><span class="nav-number">1.2.</span> <span class="nav-text">maven</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ItelliJ-IDEA"><span class="nav-number">1.3.</span> <span class="nav-text">ItelliJ IDEA</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Flink下载-amp-启动"><span class="nav-number">2.</span> <span class="nav-text">Flink下载&amp;启动</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#WordCount示例"><span class="nav-number">3.</span> <span class="nav-text">WordCount示例</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#执行示例"><span class="nav-number">4.</span> <span class="nav-text">执行示例</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#关闭Flink本地集群"><span class="nav-number">5.</span> <span class="nav-text">关闭Flink本地集群</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#源码"><span class="nav-number">6.</span> <span class="nav-text">源码</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文档"><span class="nav-number">7.</span> <span class="nav-text">参考文档</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">reyzal</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">4</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">5</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">reyzal</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v4.2.1
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">主题 – <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v7.7.1
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
